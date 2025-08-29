@@ -18,6 +18,32 @@ const messageModel = mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Chat",
     },
+    // File attachment fields
+    fileType: {
+      type: String,
+      enum: ['image', 'document', 'audio', 'video', null],
+      default: null,
+    },
+    fileName: {
+      type: String,
+      trim: true,
+    },
+    fileUrl: {
+      type: String,
+      trim: true,
+    },
+    fileSize: {
+      type: Number,
+    },
+    // Soft deletion field
+    deleted: {
+      type: Boolean,
+      default: false,
+    },
+    deletedAt: {
+      type: Date,
+      default: null,
+    },
   },
   {
     timeStamp: true,

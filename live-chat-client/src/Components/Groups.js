@@ -1,6 +1,7 @@
 import React, { useContext, useEffect, useState } from "react";
 import "./myStyles.css";
 import SearchIcon from "@mui/icons-material/Search";
+import AddIcon from "@mui/icons-material/Add";
 import { IconButton } from "@mui/material";
 import logo from "../Images/live-chat_512px.png";
 import { useDispatch, useSelector } from "react-redux";
@@ -18,6 +19,7 @@ function Groups() {
   const lightTheme = useSelector((state) => state.themeKey);
   const dispatch = useDispatch();
   const [groups, SetGroups] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
   const userData = JSON.parse(localStorage.getItem("userData"));
   // console.log("Data from LocalStorage : ", userData);
   const nav = useNavigate();
@@ -40,6 +42,10 @@ function Groups() {
       .then((response) => {
         console.log("Group Data from API ", response.data);
         SetGroups(response.data);
+      })
+      .catch((error) => {
+        console.error("Error fetching groups:", error);
+        SetGroups([]);
       });
   }, [refresh]);
 
@@ -66,8 +72,18 @@ function Groups() {
           <IconButton
             className={"icon" + (lightTheme ? "" : " dark")}
             onClick={() => {
+              nav("/app/create-groups");
+            }}
+            title="Create New Group"
+          >
+            <AddIcon />
+          </IconButton>
+          <IconButton
+            className={"icon" + (lightTheme ? "" : " dark")}
+            onClick={() => {
               setRefresh(!refresh);
             }}
+            title="Refresh Groups"
           >
             <RefreshIcon />
           </IconButton>
@@ -79,10 +95,17 @@ function Groups() {
           <input
             placeholder="Search"
             className={"search-box" + (lightTheme ? "" : " dark")}
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
         <div className="ug-list">
-          {groups.map((group, index) => {
+          {groups
+            .filter((group) => {
+              if (searchTerm === "") return true;
+              return group.chatName.toLowerCase().includes(searchTerm.toLowerCase());
+            })
+            .map((group, index) => {
             return (
               <motion.div
                 whileHover={{ scale: 1.01 }}
@@ -90,20 +113,9 @@ function Groups() {
                 className={"list-tem" + (lightTheme ? "" : " dark")}
                 key={index}
                 onClick={() => {
-                  console.log("Creating chat with group", group.name);
-                  // const config = {
-                  //   headers: {
-                  //     Authorization: `Bearer ${userData.data.token}`,
-                  //   },
-                  // };
-                  // axios.post(
-                  //   "http://localhost:8080/chat/",
-                  //   {
-                  //     userId: user._id,
-                  //   },
-                  //   config
-                  // );
-                  dispatch(refreshSidebarFun());
+                  console.log("Opening group chat:", group.chatName);
+                  // Navigate to the group chat
+                  nav(`chat/${group._id}&${group.chatName}`);
                 }}
               >
                 <p className={"con-icon" + (lightTheme ? "" : " dark")}>T</p>

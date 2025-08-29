@@ -12,14 +12,56 @@ function Login() {
 
   const [logInStatus, setLogInStatus] = React.useState("");
   const [signInStatus, setSignInStatus] = React.useState("");
+  const [fieldErrors, setFieldErrors] = React.useState({});
 
   const navigate = useNavigate();
 
   const changeHandler = (e) => {
-    setData({ ...data, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setData({ ...data, [name]: value });
+    
+    // Clear field error when user starts typing
+    if (fieldErrors[name]) {
+      setFieldErrors(prev => ({ ...prev, [name]: "" }));
+    }
+  };
+
+  const validateField = (name, value) => {
+    if (!value.trim()) {
+      return `${name.charAt(0).toUpperCase() + name.slice(1)} is required`;
+    }
+    
+    if (name === 'email' && value.trim()) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(value)) {
+        return 'Please enter a valid email address';
+      }
+    }
+    
+    if (name === 'password' && value.trim() && value.length < 6) {
+      return 'Password must be at least 6 characters long';
+    }
+    
+    return '';
   };
 
   const loginHandler = async (e) => {
+    // Validate fields before making API call
+    const errors = {};
+    ['name', 'password'].forEach(field => {
+      const error = validateField(field, data[field]);
+      if (error) errors[field] = error;
+    });
+    
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
+      setLogInStatus({ 
+        msg: "Please fix the errors above", 
+        key: Math.random() 
+      });
+      return;
+    }
+
     setLoading(true);
     console.log(data);
     try {
@@ -40,8 +82,17 @@ function Login() {
       localStorage.setItem("userData", JSON.stringify(response));
       navigate("/app/welcome");
     } catch (error) {
+      let errorMessage = "Login failed. Please try again.";
+      
+      if (error.response && error.response.data && error.response.data.message) {
+        // Use the specific error message from the backend
+        errorMessage = error.response.data.message;
+      } else if (error.response && error.response.status === 401) {
+        errorMessage = "Invalid username or password";
+      }
+      
       setLogInStatus({
-        msg: "Invalid User name or Password",
+        msg: errorMessage,
         key: Math.random(),
       });
     }
@@ -49,6 +100,22 @@ function Login() {
   };
 
   const signUpHandler = async () => {
+    // Validate fields before making API call
+    const errors = {};
+    ['name', 'email', 'password'].forEach(field => {
+      const error = validateField(field, data[field]);
+      if (error) errors[field] = error;
+    });
+    
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
+      setSignInStatus({ 
+        msg: "Please fix the errors above", 
+        key: Math.random() 
+      });
+      return;
+    }
+
     setLoading(true);
     try {
       const config = {
@@ -69,18 +136,28 @@ function Login() {
       setLoading(false);
     } catch (error) {
       console.log(error);
-      if (error.response.status === 405) {
-        setLogInStatus({
-          msg: "User with this email ID already Exists",
-          key: Math.random(),
-        });
+      let errorMessage = "Registration failed. Please try again.";
+      
+      if (error.response && error.response.data && error.response.data.message) {
+        // Use the specific error message from the backend
+        errorMessage = error.response.data.message;
+      } else if (error.response && error.response.status === 409) {
+        // Handle conflict errors (duplicate email or username)
+        if (error.response.data && error.response.data.message) {
+          errorMessage = error.response.data.message;
+        } else {
+          errorMessage = "User with this email or username already exists";
+        }
+      } else if (error.response && error.response.status === 400) {
+        // Handle validation errors
+        if (error.response.data && error.response.data.message) {
+          errorMessage = error.response.data.message;
+        } else {
+          errorMessage = "Please fill in all required fields";
+        }
       }
-      if (error.response.status === 406) {
-        setLogInStatus({
-          msg: "User Name already Taken, Please take another one",
-          key: Math.random(),
-        });
-      }
+      
+      setSignInStatus({ msg: errorMessage, key: Math.random() });
       setLoading(false);
     }
   };
@@ -107,6 +184,9 @@ function Login() {
               variant="outlined"
               color="secondary"
               name="name"
+              helperText={fieldErrors.name || "Enter your username"}
+              error={!!fieldErrors.name}
+              required
               onKeyDown={(event) => {
                 if (event.code == "Enter") {
                   // console.log(event);
@@ -122,6 +202,9 @@ function Login() {
               autoComplete="current-password"
               color="secondary"
               name="password"
+              helperText={fieldErrors.password || "Enter your password"}
+              error={!!fieldErrors.password}
+              required
               onKeyDown={(event) => {
                 if (event.code == "Enter") {
                   // console.log(event);
@@ -143,6 +226,9 @@ function Login() {
                 className="hyper"
                 onClick={() => {
                   setShowLogin(false);
+                  setFieldErrors({});
+                  setLogInStatus("");
+                  setSignInStatus("");
                 }}
               >
                 Sign Up
@@ -163,7 +249,9 @@ function Login() {
               variant="outlined"
               color="secondary"
               name="name"
-              helperText=""
+              helperText={fieldErrors.name || "Username must be unique"}
+              error={!!fieldErrors.name}
+              required
               onKeyDown={(event) => {
                 if (event.code == "Enter") {
                   // console.log(event);
@@ -178,6 +266,10 @@ function Login() {
               variant="outlined"
               color="secondary"
               name="email"
+              helperText={fieldErrors.email || "Email must be unique"}
+              error={!!fieldErrors.email}
+              type="email"
+              required
               onKeyDown={(event) => {
                 if (event.code == "Enter") {
                   // console.log(event);
@@ -193,6 +285,9 @@ function Login() {
               autoComplete="current-password"
               color="secondary"
               name="password"
+              helperText={fieldErrors.password || "Password must be at least 6 characters"}
+              error={!!fieldErrors.password}
+              required
               onKeyDown={(event) => {
                 if (event.code == "Enter") {
                   // console.log(event);
@@ -213,6 +308,9 @@ function Login() {
                 className="hyper"
                 onClick={() => {
                   setShowLogin(true);
+                  setFieldErrors({});
+                  setLogInStatus("");
+                  setSignInStatus("");
                 }}
               >
                 Log in

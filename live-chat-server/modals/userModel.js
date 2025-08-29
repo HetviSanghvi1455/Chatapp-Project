@@ -5,19 +5,23 @@ const userModel = mongoose.Schema(
   {
     name: {
       type: String,
-      requried: true,
+      required: true,
     },
     email: {
       type: String,
-      requried: true,
+      required: true,
     },
     password: {
       type: String,
-      requried: true,
+      required: true,
     },
+    blockedUsers: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    }],
   },
   {
-    timeStamp: true,
+    timestamps: true,
   }
 );
 
@@ -26,8 +30,8 @@ userModel.methods.matchPassword = async function (enteredPassword) {
 };
 
 userModel.pre("save", async function (next) {
-  if (!this.isModified) {
-    next();
+  if (!this.isModified("password")) {
+    return next();
   }
 
   const salt = await bcrypt.genSalt(10);
